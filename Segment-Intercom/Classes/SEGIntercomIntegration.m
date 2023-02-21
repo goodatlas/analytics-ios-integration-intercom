@@ -53,13 +53,17 @@
 - (void)identify:(SEGIdentifyPayload *)payload
 {
     // Intercom allows users to choose to track only known or only unknown users, as well as both. Segment will support the ability to track both by checking for loggedIn users (determined by the userId) and falling back to setting the user as "Unidentified" if this is not present.
-    if (payload.userId) {
-        [self.intercom registerUserWithUserId:payload.userId];
-        SEGLog(@"[Intercom registerUserWithUserId:%@];", payload.userId);
-    } else if (payload.anonymousId) {
-        [self.intercom registerUnidentifiedUser];
-        SEGLog(@"[Intercom registerUnidentifiedUser];");
-    }
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (payload.userId) {
+            ICMUserAttributes *attributes = [ICMUserAttributes new];
+            attributes.userId = payload.userId;
+            [self.intercom loginUserWithUserAttributes:attributes success:nil failure:nil];
+            SEGLog(@"[Intercom registerUserWithUserId:%@];", payload.userId);
+        } else if (payload.anonymousId) {
+            [self.intercom loginUnidentifiedUserWithSuccess:nil failure:nil];
+            SEGLog(@"[Intercom registerUnidentifiedUser];");
+        }
+    });
 
     NSDictionary *integration = [payload.integrations valueForKey:@"intercom"];
     if (integration[@"user_hash"]) {
@@ -113,8 +117,10 @@
         }
     }];
 
-    [self.intercom logEventWithName:payload.event metaData:output];
-    SEGLog(@"[Intercom logEventWithName:%@ metaData:%@];", payload.event, output);
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self.intercom logEventWithName:payload.event metaData:output];
+        SEGLog(@"[Intercom logEventWithName:%@ metaData:%@];", payload.event, output);
+    });
 }
 
 
@@ -203,9 +209,11 @@
         }
     }
 
-    userAttributes.customAttributes = customAttributes;
-    [self.intercom updateUser:userAttributes];
-    SEGLog(@"[Intercom updateUser:%@];", userAttributes);
+    dispatch_async(dispatch_get_main_queue(), ^{
+        userAttributes.customAttributes = customAttributes;
+        [self.intercom updateUser:userAttributes success:nil failure:nil];
+        SEGLog(@"[Intercom updateUser:%@];", userAttributes);
+    });
 }
 
 - (ICMCompany *)setCompanyAttributes:(NSDictionary *)companyTraits andCompany:(ICMCompany *)company
