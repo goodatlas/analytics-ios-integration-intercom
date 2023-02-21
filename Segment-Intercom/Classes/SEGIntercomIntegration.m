@@ -136,8 +136,10 @@
     ICMUserAttributes *userAttributes = [ICMUserAttributes new];
     userAttributes.companies = @[ company ];
 
-    [self.intercom updateUser:userAttributes];
-    SEGLog(@"[Intercom updateUser:%@];", userAttributes);
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self.intercom updateUser:userAttributes success:nil failure:nil];
+        SEGLog(@"[Intercom updateUser:%@];", userAttributes);
+    });
 }
 
 - (void)reset
